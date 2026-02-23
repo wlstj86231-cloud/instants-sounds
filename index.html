@@ -203,9 +203,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
         // Firebase Configuration
         const firebaseConfig = {
@@ -218,9 +218,16 @@
         };
 
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
+        let app, db, storage;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            storage = getStorage(app);
+            console.log("Firebase initialized successfully");
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            alert("파이어베이스 초기화 실패. 설정을 확인해주세요.");
+        }
 
         // State
         let sounds = [];
@@ -238,11 +245,12 @@
         const sortPopularBtn = document.getElementById('sortPopularBtn');
         const currentYearSpan = document.getElementById('currentYear');
 
-        currentYearSpan.textContent = new Date().getFullYear();
+        if (currentYearSpan) currentYearSpan.textContent = new Date().getFullYear();
 
         // --- Functions ---
 
         async function loadSounds() {
+            if (!db) return;
             soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드 로딩 중...</div>';
             try {
                 let q = query(collection(db, "sounds"), orderBy("createdAt", "desc"));
@@ -306,8 +314,9 @@
                         <h3 class="text-lg sm:text-xl font-normal text-black truncate px-1 w-full" title="${sound.title}">
                             ${sound.title}
                         </h3>
-                        <div class="flex flex-col sm:flex-row gap-1 mt-1">
+                        <div class="flex flex-wrap justify-center gap-1 mt-1">
                             <button onclick="downloadSound('${sound.url}', '${sound.title}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">다운로드</button>
+                            <button onclick="copyLink('${sound.url}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">링크복사</button>
                             <button onclick="shareSound('${sound.title}', '${sound.url}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">공유</button>
                             ${isAdmin ? `<button onclick="deleteSound('${sound.id}', '${sound.storagePath}')" class="px-2 py-0 bg-[#FF6B6B] text-black border-2 border-black text-sm sound-button-shadow">삭제</button>` : ''}
                         </div>
@@ -317,43 +326,63 @@
         }
 
         window.playSound = async (url, id) => {
-            if (currentAudio && currentPlayingId === id) {
-                if (!currentAudio.paused) {
+            try {
+                if (currentAudio && currentPlayingId === id) {
+                    if (!currentAudio.paused) {
+                        currentAudio.pause();
+                        currentPlayingId = null;
+                        renderSounds();
+                        return;
+                    }
+                }
+
+                if (currentAudio) {
                     currentAudio.pause();
+                    currentAudio = null;
+                }
+
+                currentPlayingId = id;
+                currentAudio = new Audio(url);
+                
+                const playPromise = currentAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        renderSounds();
+                    }).catch(error => {
+                        console.error("Playback failed:", error);
+                        currentPlayingId = null;
+                        renderSounds();
+                    });
+                }
+
+                currentAudio.onended = () => {
                     currentPlayingId = null;
                     renderSounds();
-                    return;
-                }
-            }
+                };
 
-            if (currentAudio) {
-                currentAudio.pause();
-            }
-
-            currentPlayingId = id;
-            currentAudio = new Audio(url);
-            currentAudio.play();
-            renderSounds();
-
-            currentAudio.onended = () => {
-                currentPlayingId = null;
-                renderSounds();
-            };
-
-            // Increment play count in Firestore
-            try {
+                // Increment play count in Firestore
                 const soundRef = doc(db, "sounds", id);
                 await updateDoc(soundRef, {
                     playCount: increment(1)
                 });
             } catch (e) {
-                console.error("Error updating play count:", e);
+                console.error("Error in playSound:", e);
             }
+        };
+
+        window.copyLink = (url) => {
+            navigator.clipboard.writeText(url).then(() => {
+                showAlert("링크가 클립보드에 복사되었습니다.");
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
         };
 
         window.downloadSound = async (url, title) => {
             try {
                 const response = await window.fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
                 const blob = await response.blob();
                 const blobUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -370,7 +399,7 @@
                 } else if (blob.type) {
                     const typeParts = blob.type.split('/');
                     if (typeParts.length > 1) {
-                        extension = typeParts[1];
+                        extension = typeParts[1].replace('mpeg', 'mp3');
                     }
                 }
 
@@ -380,7 +409,9 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(blobUrl);
             } catch (e) {
-                showAlert("다운로드에 실패했습니다.");
+                console.warn("Fetch download failed, falling back to direct link:", e);
+                // Fallback: open in new tab
+                window.open(url, '_blank');
             }
         };
 
@@ -396,7 +427,7 @@
                     console.log("Share failed or cancelled");
                 }
             } else {
-                showAlert("이 브라우저는 공유 기능을 지원하지 않습니다.");
+                window.copyLink(url);
             }
         };
 
@@ -422,9 +453,7 @@
 
         window.verifyAdmin = () => {
             const input = document.getElementById('adminCodeInput').value;
-            // For GitHub Pages, we use a simple hardcoded check or prompt.
-            // In a real app, you'd use Firebase Auth.
-            if (input === "021017") { // 기본 관리자 코드
+            if (input === "021017") { 
                 isAdmin = true;
                 closeAdminModal();
                 showAlert("관리자 모드가 활성화되었습니다.");
@@ -437,9 +466,7 @@
         window.deleteSound = (id, storagePath) => {
             showConfirm("정말로 이 사운드를 삭제하시겠습니까?", async () => {
                 try {
-                    // Delete from Firestore
                     await deleteDoc(doc(db, "sounds", id));
-                    // Delete from Storage if path exists
                     if (storagePath) {
                         const fileRef = ref(storage, storagePath);
                         await deleteObject(fileRef);
@@ -467,11 +494,18 @@
         };
 
         window.handleUpload = async () => {
-            const title = document.getElementById('uploadTitle').value;
-            const file = document.getElementById('uploadFile').files[0];
+            const titleInput = document.getElementById('uploadTitle');
+            const fileInput = document.getElementById('uploadFile');
+            const title = titleInput.value.trim();
+            const file = fileInput.files[0];
 
             if (!title || !file) {
                 showAlert("제목과 파일을 모두 선택해주세요.");
+                return;
+            }
+
+            if (!storage || !db) {
+                showAlert("파이어베이스가 초기화되지 않았습니다. 페이지를 새로고침하거나 설정을 확인하세요.");
                 return;
             }
 
@@ -480,48 +514,64 @@
             submitBtn.textContent = "업로드 중...";
             document.getElementById('uploadProgress').classList.remove('hidden');
 
-            const storagePath = `sounds/${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, storagePath);
-            const uploadTask = uploadBytesResumable(storageRef, file);
+            try {
+                // Sanitize filename: remove special characters and spaces
+                const safeFileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+                const storagePath = `sounds/${Date.now()}_${safeFileName}`;
+                const storageRef = ref(storage, storagePath);
+                const uploadTask = uploadBytesResumable(storageRef, file);
 
-            uploadTask.on('state_changed', 
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    document.getElementById('progressBar').style.width = progress + '%';
-                }, 
-                (error) => {
-                    console.error("Upload error:", error);
-                    showAlert("업로드 실패: 파이어베이스 설정을 확인하세요.");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "업로드";
-                }, 
-                async () => {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    try {
-                        await addDoc(collection(db, "sounds"), {
-                            title: title,
-                            url: downloadURL,
-                            storagePath: storagePath,
-                            playCount: 0,
-                            createdAt: new Date().toISOString()
-                        });
-                        showAlert("업로드 성공!");
-                        closeUploadModal();
-                        loadSounds();
-                    } catch (e) {
-                        console.error("Firestore error:", e);
-                        showAlert("데이터베이스 저장 실패.");
-                    } finally {
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        document.getElementById('progressBar').style.width = progress + '%';
+                    }, 
+                    (error) => {
+                        console.error("Upload error details:", error);
+                        let errorMsg = "업로드 실패: ";
+                        if (error.code === 'storage/unauthorized') {
+                            errorMsg += "권한이 없습니다. Firebase Storage 규칙을 확인하세요.";
+                        } else {
+                            errorMsg += error.message;
+                        }
+                        showAlert(errorMsg);
                         submitBtn.disabled = false;
                         submitBtn.textContent = "업로드";
+                    }, 
+                    async () => {
+                        try {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            await addDoc(collection(db, "sounds"), {
+                                title: title,
+                                url: downloadURL,
+                                storagePath: storagePath,
+                                playCount: 0,
+                                createdAt: new Date().toISOString()
+                            });
+                            showAlert("업로드 성공!");
+                            closeUploadModal();
+                            loadSounds();
+                        } catch (e) {
+                            console.error("Firestore error:", e);
+                            showAlert("데이터베이스 저장 실패: " + e.message);
+                        } finally {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = "업로드";
+                        }
                     }
-                }
-            );
+                );
+            } catch (err) {
+                console.error("Immediate upload error:", err);
+                showAlert("업로드 시작 실패: " + err.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = "업로드";
+            }
         };
 
         // --- Custom Dialogs ---
         window.showAlert = (msg) => {
-            document.getElementById('alertMessage').textContent = msg;
+            const alertMsg = document.getElementById('alertMessage');
+            if (alertMsg) alertMsg.textContent = msg;
             document.getElementById('alertModal').classList.remove('hidden');
         };
 
@@ -530,7 +580,8 @@
         };
 
         window.showConfirm = (msg, callback) => {
-            document.getElementById('confirmMessage').textContent = msg;
+            const confirmMsg = document.getElementById('confirmMessage');
+            if (confirmMsg) confirmMsg.textContent = msg;
             document.getElementById('confirmModal').classList.remove('hidden');
             confirmCallback = callback;
         };
@@ -544,7 +595,7 @@
         };
 
         // Initial Load
-        loadSounds();
+        if (db) loadSounds();
 
     </script>
 </body>
