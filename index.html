@@ -1,34 +1,536 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인스턴트 사운드 - 밈 & 사운드보드</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #FDF6E3;
+            color: #584B3A;
+            font-family: 'VT323', monospace;
+        }
+        .sound-button-shadow {
+            box-shadow: 4px 4px 0px #000000;
+            border: 2px solid #000000;
+        }
+        .sound-button-shadow:active {
+            box-shadow: 1px 1px 0px #000000;
+            transform: translate(3px, 3px);
+        }
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FDF6E3;
+            border-left: 2px solid #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #000;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-[#FDF6E3] border-b-2 border-black sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+            <div class="relative flex items-center gap-2 cursor-pointer" onclick="resetSearch()">
+                <div class="w-10 h-10 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center text-black shadow-[4px_4px_0px_#000000]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                </div>
+                <h1 class="text-3xl tracking-tight hidden sm:block">인스턴트 사운드</h1>
+            </div>
+
+            <div class="flex-1 max-w-xl relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="사운드 검색..."
+                    class="w-full pl-10 pr-4 py-2 text-lg bg-[#FDF6E3] border-2 border-black rounded-none focus:ring-0 focus:border-black transition-all outline-none"
+                    oninput="handleSearch(this.value)"
+                />
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button 
+                    id="sortPopularBtn"
+                    onclick="toggleSortPopular()"
+                    class="p-2 border-2 border-black transition-colors bg-[#DCCB98] sound-button-shadow"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </button>
+
+                <button 
+                    onclick="openUploadModal()"
+                    class="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#FF6B6B] text-black rounded-none font-medium transition-colors shadow-sm border-2 border-black sound-button-shadow"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    업로드
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ad Area -->
+    <div class="w-full max-w-7xl mx-auto px-4 py-8 bg-[#FDF6E3] border-b-2 border-black flex items-center justify-center" style="height: 200px;">
+        <p class="text-2xl text-black">광고 영역 (200px)</p>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
+        <div id="soundGrid" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+            <!-- Sounds will be loaded here -->
+            <div class="col-span-full text-center py-20">로딩 중...</div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#FDF6E3] border-t-2 border-black py-8">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="col-span-1 md:col-span-2">
+                <div class="relative flex items-center gap-2 mb-4 w-fit">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center text-black shadow-[4px_4px_0px_#000000]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                        </div>
+                        <span class="text-2xl">인스턴트 사운드</span>
+                    </div>
+                    <!-- Admin Toggle Hidden Box -->
+                    <div id="adminToggleBox" class="absolute inset-y-0 -right-12 w-12 cursor-pointer" onclick="handleAdminClick()"></div>
+                </div>
+                <p class="text-lg max-w-md">
+                    당신이 좋아하는 모든 밈, 음향 효과, 틱톡 트렌드를 위한 최고의 사운드보드입니다. 
+                    클릭하고, 재생하고, 친구들과 즐거움을 공유하세요!
+                </p>
+            </div>
+            <div>
+                <h4 class="text-xl mb-4">링크</h4>
+                <ul class="space-y-2 text-lg">
+                    <li><a href="#" class="hover:underline">인기 사운드</a></li>
+                    <li><a href="#" class="hover:underline">최신</a></li>
+                    <li><a href="#" class="hover:underline">카테고리</a></li>
+                    <li><a href="#" class="hover:underline">소개</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xl mb-4">약관</h4>
+                <ul class="space-y-2 text-lg">
+                    <li><a href="#" class="hover:underline">서비스 이용약관</a></li>
+                    <li><a href="#" class="hover:underline">개인정보 처리방침</a></li>
+                    <li><a href="#" class="hover:underline">저작권</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t-2 border-black text-center text-lg">
+            © <span id="currentYear"></span> 인스턴트 사운드. 모든 권리 보유.
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-md shadow-[8px_8px_0px_#000000] p-6">
+            <h2 class="text-3xl mb-6">사운드 업로드</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xl mb-1">제목</label>
+                    <input type="text" id="uploadTitle" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none" placeholder="사운드 제목 입력">
+                </div>
+                <div>
+                    <label class="block text-xl mb-1">파일 (MP3)</label>
+                    <input type="file" id="uploadFile" accept="audio/mpeg" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none">
+                </div>
+                <div id="uploadProgress" class="hidden w-full bg-gray-200 h-2 mt-2">
+                    <div id="progressBar" class="bg-black h-full w-0 transition-all"></div>
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button onclick="closeUploadModal()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-gray-200">취소</button>
+                    <button id="uploadSubmitBtn" onclick="handleUpload()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-[#FF6B6B]">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
+            <h2 class="text-2xl mb-4">관리자 인증</h2>
+            <input type="password" id="adminCodeInput" placeholder="관리자 코드를 입력하세요" class="w-full px-3 py-2 text-lg bg-[#FDF6E3] border-2 border-black outline-none mb-4">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeAdminModal()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-gray-200">취소</button>
+                <button onclick="verifyAdmin()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-[#FF6B6B]">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="alertModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
+            <h2 class="text-2xl mb-4">알림</h2>
+            <p id="alertMessage" class="text-lg mb-6"></p>
+            <div class="flex justify-end">
+                <button onclick="closeAlert()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-[#DCCB98]">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
+            <h2 class="text-2xl mb-4">확인</h2>
+            <p id="confirmMessage" class="text-lg mb-6"></p>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeConfirm(false)" class="px-4 py-2 border-2 border-black sound-button-shadow bg-gray-200">취소</button>
+                <button onclick="closeConfirm(true)" class="px-4 py-2 border-2 border-black sound-button-shadow bg-[#FF6B6B]">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
     <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBX6VuB9dxCeUymmJeyIqIQtSIbo2bKw-w",
-    authDomain: "instants-sounds.firebaseapp.com",
-    projectId: "instants-sounds",
-    storageBucket: "instants-sounds.firebasestorage.app",
-    messagingSenderId: "364087878036",
-    appId: "1:364087878036:web:36f9ce7005dd4eec9a6f81"
-  };
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBX6VuB9dxCeUymmJeyIqIQtSIbo2bKw-w",
+            authDomain: "instants-sounds.firebaseapp.com",
+            projectId: "instants-sounds",
+            storageBucket: "instants-sounds.firebasestorage.app",
+            messagingSenderId: "364087878036",
+            appId: "1:364087878036:web:36f9ce7005dd4eec9a6f81"
+        };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-  </body>
+        // State
+        let sounds = [];
+        let filteredSounds = [];
+        let isPopularSort = false;
+        let isAdmin = false;
+        let adminClickCount = 0;
+        let currentAudio = null;
+        let currentPlayingId = null;
+        let confirmCallback = null;
+
+        // UI Elements
+        const soundGrid = document.getElementById('soundGrid');
+        const searchInput = document.getElementById('searchInput');
+        const sortPopularBtn = document.getElementById('sortPopularBtn');
+        const currentYearSpan = document.getElementById('currentYear');
+
+        currentYearSpan.textContent = new Date().getFullYear();
+
+        // --- Functions ---
+
+        async function loadSounds() {
+            soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드 로딩 중...</div>';
+            try {
+                let q = query(collection(db, "sounds"), orderBy("createdAt", "desc"));
+                if (isPopularSort) {
+                    q = query(collection(db, "sounds"), orderBy("playCount", "desc"));
+                }
+                
+                const querySnapshot = await getDocs(q);
+                sounds = [];
+                querySnapshot.forEach((doc) => {
+                    sounds.push({ id: doc.id, ...doc.data() });
+                });
+                applyFilter();
+            } catch (error) {
+                console.error("Error fetching sounds:", error);
+                soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">로딩 실패. 파이어베이스 설정을 확인하세요.</div>';
+            }
+        }
+
+        window.handleSearch = (val) => {
+            applyFilter();
+        };
+
+        window.resetSearch = () => {
+            searchInput.value = '';
+            applyFilter();
+        };
+
+        window.toggleSortPopular = () => {
+            isPopularSort = !isPopularSort;
+            sortPopularBtn.classList.toggle('bg-[#FFD700]', isPopularSort);
+            sortPopularBtn.classList.toggle('bg-[#DCCB98]', !isPopularSort);
+            loadSounds();
+        };
+
+        function applyFilter() {
+            const term = searchInput.value.toLowerCase();
+            filteredSounds = sounds.filter(s => s.title.toLowerCase().includes(term));
+            renderSounds();
+        }
+
+        function renderSounds() {
+            if (filteredSounds.length === 0) {
+                soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드를 찾을 수 없습니다.</div>';
+                return;
+            }
+
+            soundGrid.innerHTML = filteredSounds.map(sound => `
+                <div class="flex flex-col items-center group">
+                    <button
+                        onclick="playSound('${sound.url}', '${sound.id}')"
+                        class="relative w-full aspect-square rounded-none flex items-center justify-center transition-all bg-[#DCCB98] sound-button-shadow ${currentPlayingId === sound.id ? 'bg-[#FFD700]' : ''}"
+                    >
+                        <div class="absolute inset-0 rounded-full bg-black/5 group-hover:bg-transparent transition-colors"></div>
+                        ${currentPlayingId === sound.id ? 
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>' : 
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+                        }
+                    </button>
+                    <div class="mt-2 text-center w-full flex flex-col items-center">
+                        <h3 class="text-lg sm:text-xl font-normal text-black truncate px-1 w-full" title="${sound.title}">
+                            ${sound.title}
+                        </h3>
+                        <div class="flex flex-col sm:flex-row gap-1 mt-1">
+                            <button onclick="downloadSound('${sound.url}', '${sound.title}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">다운로드</button>
+                            <button onclick="shareSound('${sound.title}', '${sound.url}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">공유</button>
+                            ${isAdmin ? `<button onclick="deleteSound('${sound.id}', '${sound.storagePath}')" class="px-2 py-0 bg-[#FF6B6B] text-black border-2 border-black text-sm sound-button-shadow">삭제</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.playSound = async (url, id) => {
+            if (currentAudio && currentPlayingId === id) {
+                if (!currentAudio.paused) {
+                    currentAudio.pause();
+                    currentPlayingId = null;
+                    renderSounds();
+                    return;
+                }
+            }
+
+            if (currentAudio) {
+                currentAudio.pause();
+            }
+
+            currentPlayingId = id;
+            currentAudio = new Audio(url);
+            currentAudio.play();
+            renderSounds();
+
+            currentAudio.onended = () => {
+                currentPlayingId = null;
+                renderSounds();
+            };
+
+            // Increment play count in Firestore
+            try {
+                const soundRef = doc(db, "sounds", id);
+                await updateDoc(soundRef, {
+                    playCount: increment(1)
+                });
+            } catch (e) {
+                console.error("Error updating play count:", e);
+            }
+        };
+
+        window.downloadSound = async (url, title) => {
+            try {
+                const response = await window.fetch(url);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = `${title}.mp3`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                showAlert("다운로드에 실패했습니다.");
+            }
+        };
+
+        window.shareSound = async (title, url) => {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: title,
+                        text: `${title} 사운드를 들어보세요!`,
+                        url: url
+                    });
+                } catch (e) {
+                    console.log("Share failed or cancelled");
+                }
+            } else {
+                showAlert("이 브라우저는 공유 기능을 지원하지 않습니다.");
+            }
+        };
+
+        // --- Admin Logic ---
+        window.handleAdminClick = () => {
+            if (isAdmin) {
+                isAdmin = false;
+                showAlert("관리자 모드가 비활성화되었습니다.");
+                renderSounds();
+                return;
+            }
+            adminClickCount++;
+            if (adminClickCount >= 5) {
+                document.getElementById('adminModal').classList.remove('hidden');
+                adminClickCount = 0;
+            }
+        };
+
+        window.closeAdminModal = () => {
+            document.getElementById('adminModal').classList.add('hidden');
+            document.getElementById('adminCodeInput').value = '';
+        };
+
+        window.verifyAdmin = () => {
+            const input = document.getElementById('adminCodeInput').value;
+            // For GitHub Pages, we use a simple hardcoded check or prompt.
+            // In a real app, you'd use Firebase Auth.
+            if (input === "021017") { // 기본 관리자 코드
+                isAdmin = true;
+                closeAdminModal();
+                showAlert("관리자 모드가 활성화되었습니다.");
+                renderSounds();
+            } else {
+                showAlert("잘못된 코드입니다.");
+            }
+        };
+
+        window.deleteSound = (id, storagePath) => {
+            showConfirm("정말로 이 사운드를 삭제하시겠습니까?", async () => {
+                try {
+                    // Delete from Firestore
+                    await deleteDoc(doc(db, "sounds", id));
+                    // Delete from Storage if path exists
+                    if (storagePath) {
+                        const fileRef = ref(storage, storagePath);
+                        await deleteObject(fileRef);
+                    }
+                    showAlert("삭제되었습니다.");
+                    loadSounds();
+                } catch (e) {
+                    console.error("Delete failed:", e);
+                    showAlert("삭제 실패: 권한이 없거나 오류가 발생했습니다.");
+                }
+            });
+        };
+
+        // --- Upload Logic ---
+        window.openUploadModal = () => {
+            document.getElementById('uploadModal').classList.remove('hidden');
+        };
+
+        window.closeUploadModal = () => {
+            document.getElementById('uploadModal').classList.add('hidden');
+            document.getElementById('uploadTitle').value = '';
+            document.getElementById('uploadFile').value = '';
+            document.getElementById('uploadProgress').classList.add('hidden');
+            document.getElementById('progressBar').style.width = '0%';
+        };
+
+        window.handleUpload = async () => {
+            const title = document.getElementById('uploadTitle').value;
+            const file = document.getElementById('uploadFile').files[0];
+
+            if (!title || !file) {
+                showAlert("제목과 파일을 모두 선택해주세요.");
+                return;
+            }
+
+            const submitBtn = document.getElementById('uploadSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = "업로드 중...";
+            document.getElementById('uploadProgress').classList.remove('hidden');
+
+            const storagePath = `sounds/${Date.now()}_${file.name}`;
+            const storageRef = ref(storage, storagePath);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    document.getElementById('progressBar').style.width = progress + '%';
+                }, 
+                (error) => {
+                    console.error("Upload error:", error);
+                    showAlert("업로드 실패: 파이어베이스 설정을 확인하세요.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "업로드";
+                }, 
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    try {
+                        await addDoc(collection(db, "sounds"), {
+                            title: title,
+                            url: downloadURL,
+                            storagePath: storagePath,
+                            playCount: 0,
+                            createdAt: new Date().toISOString()
+                        });
+                        showAlert("업로드 성공!");
+                        closeUploadModal();
+                        loadSounds();
+                    } catch (e) {
+                        console.error("Firestore error:", e);
+                        showAlert("데이터베이스 저장 실패.");
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "업로드";
+                    }
+                }
+            );
+        };
+
+        // --- Custom Dialogs ---
+        window.showAlert = (msg) => {
+            document.getElementById('alertMessage').textContent = msg;
+            document.getElementById('alertModal').classList.remove('hidden');
+        };
+
+        window.closeAlert = () => {
+            document.getElementById('alertModal').classList.add('hidden');
+        };
+
+        window.showConfirm = (msg, callback) => {
+            document.getElementById('confirmMessage').textContent = msg;
+            document.getElementById('confirmModal').classList.remove('hidden');
+            confirmCallback = callback;
+        };
+
+        window.closeConfirm = (result) => {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (result && confirmCallback) {
+                confirmCallback();
+            }
+            confirmCallback = null;
+        };
+
+        // Initial Load
+        loadSounds();
+
+    </script>
+</body>
 </html>
-
