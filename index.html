@@ -2,100 +2,101 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>인스턴트 사운드 - 밈 & 사운드보드</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #FDF6E3;
             color: #584B3A;
             font-family: 'VT323', monospace;
+            -webkit-tap-highlight-color: transparent;
         }
         .sound-button-shadow {
             box-shadow: 4px 4px 0px #000000;
             border: 2px solid #000000;
         }
-        .sound-button-shadow:active {
+        .sound-button-shadow:active:not(:disabled) {
             box-shadow: 1px 1px 0px #000000;
             transform: translate(3px, 3px);
+        }
+        .sound-button-shadow:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: 2px 2px 0px #000000;
+            transform: translate(1px, 1px);
         }
         .truncate {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #FDF6E3;
-            border-left: 2px solid #000;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #000;
-        }
         .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-custom {
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col overflow-x-hidden">
 
     <!-- Header -->
     <header class="bg-[#FDF6E3] border-b-2 border-black sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-            <div class="relative flex items-center gap-2 cursor-pointer" onclick="resetSearch()">
-                <div class="w-10 h-10 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center text-black shadow-[4px_4px_0px_#000000]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-2 sm:gap-4">
+            <div class="flex items-center gap-2 cursor-pointer shrink-0" onclick="resetSearch()">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center text-black shadow-[3px_3px_0px_#000000]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
                 </div>
-                <h1 class="text-3xl tracking-tight hidden sm:block">인스턴트 사운드</h1>
+                <h1 class="text-xl sm:text-3xl tracking-tight hidden xs:block">인스턴트 사운드</h1>
             </div>
 
             <div class="flex-1 max-w-xl relative">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input
                     type="text"
                     id="searchInput"
-                    placeholder="사운드 검색..."
-                    class="w-full pl-10 pr-4 py-2 text-lg bg-[#FDF6E3] border-2 border-black rounded-none focus:ring-0 focus:border-black transition-all outline-none"
+                    placeholder="검색..."
+                    class="w-full pl-3 pr-3 py-1.5 text-lg bg-[#FDF6E3] border-2 border-black rounded-none focus:ring-0 focus:border-black transition-all outline-none"
                     oninput="handleSearch(this.value)"
                 />
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 shrink-0">
                 <button 
                     id="sortPopularBtn"
                     onclick="toggleSortPopular()"
-                    class="p-2 border-2 border-black transition-colors bg-[#DCCB98] sound-button-shadow"
+                    class="p-1.5 sm:p-2 border-2 border-black bg-[#DCCB98] sound-button-shadow"
+                    title="인기순 정렬"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                 </button>
 
                 <button 
                     onclick="openUploadModal()"
-                    class="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#FF6B6B] text-black rounded-none font-medium transition-colors shadow-sm border-2 border-black sound-button-shadow"
+                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-[#FF6B6B] text-black border-2 border-black sound-button-shadow font-medium"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                    업로드
+                    <span class="hidden xs:inline">업로드</span>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Ad Area -->
-    <div class="w-full max-w-7xl mx-auto px-4 py-8 bg-[#FDF6E3] border-b-2 border-black flex items-center justify-center" style="height: 200px;">
-        <p class="text-2xl text-black">광고 영역 (200px)</p>
+    <div class="w-full max-w-7xl mx-auto px-4 py-4 bg-[#FDF6E3] border-b-2 border-black flex items-center justify-center h-32 sm:h-48">
+        <p class="text-xl sm:text-2xl text-black opacity-50">AD AREA</p>
     </div>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
         <div id="soundGrid" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
-            <!-- Sounds will be loaded here -->
-            <div class="col-span-full text-center py-20">로딩 중...</div>
+            <div class="col-span-full text-center py-20 text-2xl">로딩 중...</div>
         </div>
     </main>
 
@@ -103,59 +104,34 @@
     <footer class="bg-[#FDF6E3] border-t-2 border-black py-8">
         <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
             <div class="col-span-1 md:col-span-2">
-                <div class="relative flex items-center gap-2 mb-4 w-fit">
-                    <div class="flex items-center gap-2">
-                        <div class="w-10 h-10 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center text-black shadow-[4px_4px_0px_#000000]">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
-                        </div>
-                        <span class="text-2xl">인스턴트 사운드</span>
+                <div class="relative flex items-center gap-2 mb-4 w-fit" onclick="handleAdminClick()">
+                    <div class="w-8 h-8 bg-[#DCCB98] border-2 border-black rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
                     </div>
-                    <!-- Admin Toggle Hidden Box -->
-                    <div id="adminToggleBox" class="absolute inset-y-0 -right-12 w-12 cursor-pointer" onclick="handleAdminClick()"></div>
+                    <span class="text-xl">인스턴트 사운드</span>
                 </div>
-                <p class="text-lg max-w-md">
-                    당신이 좋아하는 모든 밈, 음향 효과, 틱톡 트렌드를 위한 최고의 사운드보드입니다. 
-                    클릭하고, 재생하고, 친구들과 즐거움을 공유하세요!
-                </p>
-            </div>
-            <div>
-                <h4 class="text-xl mb-4">링크</h4>
-                <ul class="space-y-2 text-lg">
-                    <li><a href="#" class="hover:underline">인기 사운드</a></li>
-                    <li><a href="#" class="hover:underline">최신</a></li>
-                    <li><a href="#" class="hover:underline">카테고리</a></li>
-                    <li><a href="#" class="hover:underline">소개</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="text-xl mb-4">약관</h4>
-                <ul class="space-y-2 text-lg">
-                    <li><a href="#" class="hover:underline">서비스 이용약관</a></li>
-                    <li><a href="#" class="hover:underline">개인정보 처리방침</a></li>
-                    <li><a href="#" class="hover:underline">저작권</a></li>
-                </ul>
+                <p class="text-lg opacity-80">최고의 밈 사운드보드 아카이브</p>
             </div>
         </div>
-        <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t-2 border-black text-center text-lg">
-            © <span id="currentYear"></span> 인스턴트 사운드. 모든 권리 보유.
+        <div class="max-w-7xl mx-auto px-4 mt-8 pt-8 border-t-2 border-black text-center text-lg opacity-50">
+            © <span id="currentYear"></span> 인스턴트 사운드.
         </div>
     </footer>
 
     <!-- Modals -->
-    <!-- Upload Modal -->
     <div id="uploadModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 modal-overlay">
         <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-md shadow-[8px_8px_0px_#000000] p-6">
             <h2 class="text-3xl mb-6">사운드 업로드</h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-xl mb-1">제목</label>
-                    <input type="text" id="uploadTitle" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none" placeholder="사운드 제목 입력">
+                    <input type="text" id="uploadTitle" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none" placeholder="제목 입력">
                 </div>
                 <div>
                     <label class="block text-xl mb-1">파일 (오디오)</label>
                     <input type="file" id="uploadFile" accept="audio/*" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none">
                 </div>
-                <div id="uploadProgress" class="hidden w-full bg-gray-200 h-2 mt-2">
+                <div id="uploadProgress" class="hidden w-full bg-gray-200 h-3 border-2 border-black">
                     <div id="progressBar" class="bg-black h-full w-0 transition-all"></div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
@@ -166,11 +142,10 @@
         </div>
     </div>
 
-    <!-- Admin Modal -->
     <div id="adminModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 modal-overlay">
         <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
             <h2 class="text-2xl mb-4">관리자 인증</h2>
-            <input type="password" id="adminCodeInput" placeholder="관리자 코드를 입력하세요" class="w-full px-3 py-2 text-lg bg-[#FDF6E3] border-2 border-black outline-none mb-4">
+            <input type="password" id="adminCodeInput" placeholder="코드 입력" class="w-full px-3 py-2 text-lg bg-[#FDF6E3] border-2 border-black outline-none mb-4">
             <div class="flex justify-end gap-2">
                 <button onclick="closeAdminModal()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-gray-200">취소</button>
                 <button onclick="verifyAdmin()" class="px-4 py-2 border-2 border-black sound-button-shadow bg-[#FF6B6B]">확인</button>
@@ -178,7 +153,6 @@
         </div>
     </div>
 
-    <!-- Custom Alert Modal -->
     <div id="alertModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4 modal-overlay">
         <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
             <h2 class="text-2xl mb-4">알림</h2>
@@ -189,7 +163,6 @@
         </div>
     </div>
 
-    <!-- Custom Confirm Modal -->
     <div id="confirmModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4 modal-overlay">
         <div class="bg-[#FDF6E3] border-2 border-black w-full max-w-sm shadow-[8px_8px_0px_#000000] p-6">
             <h2 class="text-2xl mb-4">확인</h2>
@@ -201,13 +174,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBX6VuB9dxCeUymmJeyIqIQtSIbo2bKw-w",
             authDomain: "instants-sounds.firebaseapp.com",
@@ -217,18 +188,13 @@
             appId: "1:364087878036:web:36f9ce7005dd4eec9a6f81"
         };
 
-        // Initialize Firebase
         let app, db, storage;
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             storage = getStorage(app);
-            console.log("Firebase initialized successfully");
-        } catch (e) {
-            console.error("Firebase initialization failed:", e);
-        }
+        } catch (e) { console.error(e); }
 
-        // State
         let sounds = [];
         let filteredSounds = [];
         let isPopularSort = false;
@@ -236,36 +202,23 @@
         let adminClickCount = 0;
         let currentAudio = null;
         let currentPlayingId = null;
+        let loadingId = null;
         let confirmCallback = null;
 
-        // UI Elements (Lazy access)
         const getEl = (id) => document.getElementById(id);
 
-        // Ensure DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-
-        function init() {
+        window.init = () => {
             const yearSpan = getEl('currentYear');
             if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-            if (db) loadSounds();
-        }
-
-        // --- Functions ---
+            loadSounds();
+        };
 
         async function loadSounds() {
             const grid = getEl('soundGrid');
             if (!db || !grid) return;
-            grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드 로딩 중...</div>';
+            grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">로딩 중...</div>';
             try {
-                let q = query(collection(db, "sounds"), orderBy("createdAt", "desc"));
-                if (isPopularSort) {
-                    q = query(collection(db, "sounds"), orderBy("playCount", "desc"));
-                }
-                
+                let q = query(collection(db, "sounds"), orderBy(isPopularSort ? "playCount" : "createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
                 sounds = [];
                 querySnapshot.forEach((doc) => {
@@ -273,15 +226,12 @@
                 });
                 applyFilter();
             } catch (error) {
-                console.error("Error fetching sounds:", error);
-                if (grid) grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">로딩 실패. 파이어베이스 설정을 확인하세요.</div>';
+                console.error(error);
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">데이터 로드 실패</div>';
             }
         }
 
-        window.handleSearch = (val) => {
-            applyFilter();
-        };
-
+        window.handleSearch = () => applyFilter();
         window.resetSearch = () => {
             const input = getEl('searchInput');
             if (input) input.value = '';
@@ -291,10 +241,7 @@
         window.toggleSortPopular = () => {
             isPopularSort = !isPopularSort;
             const btn = getEl('sortPopularBtn');
-            if (btn) {
-                btn.classList.toggle('bg-[#FFD700]', isPopularSort);
-                btn.classList.toggle('bg-[#DCCB98]', !isPopularSort);
-            }
+            if (btn) btn.classList.toggle('bg-[#FFD700]', isPopularSort);
             loadSounds();
         };
 
@@ -309,328 +256,208 @@
             const grid = getEl('soundGrid');
             if (!grid) return;
             if (filteredSounds.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드를 찾을 수 없습니다.</div>';
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl opacity-50">검색 결과 없음</div>';
                 return;
             }
 
-            grid.innerHTML = filteredSounds.map(sound => `
-                <div class="flex flex-col items-center group">
+            grid.innerHTML = filteredSounds.map(sound => {
+                const isPlaying = currentPlayingId === sound.id;
+                const isLoading = loadingId === sound.id;
+                
+                return `
+                <div class="flex flex-col items-center">
                     <button
                         onclick="playSound('${sound.url}', '${sound.id}')"
-                        class="relative w-full aspect-square rounded-none flex items-center justify-center transition-all bg-[#DCCB98] sound-button-shadow ${currentPlayingId === sound.id ? 'bg-[#FFD700]' : ''}"
+                        class="relative w-full aspect-square flex items-center justify-center transition-all bg-[#DCCB98] sound-button-shadow ${isPlaying ? 'bg-[#FFD700]' : ''}"
+                        ${isLoading ? 'disabled' : ''}
                     >
-                        <div class="absolute inset-0 rounded-full bg-black/5 group-hover:bg-transparent transition-colors"></div>
-                        ${currentPlayingId === sound.id ? 
-                            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>' : 
-                            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+                        ${isLoading ? 
+                            '<svg class="animate-spin-custom" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>' : 
+                            (isPlaying ? 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>')
                         }
                     </button>
-                    <div class="mt-2 text-center w-full flex flex-col items-center">
-                        <h3 class="text-lg sm:text-xl font-normal text-black truncate px-1 w-full" title="${sound.title}">
-                            ${sound.title}
-                        </h3>
-                        <div class="flex flex-wrap justify-center gap-1 mt-1">
-                            <button onclick="downloadSound('${sound.url}', '${sound.title}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">다운로드</button>
-                            <button onclick="copyLink('${sound.url}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">링크복사</button>
-                            <button onclick="shareSound('${sound.title}', '${sound.url}')" class="px-2 py-0 bg-[#A9A9A9] text-black border-2 border-black text-sm sound-button-shadow">공유</button>
-                            ${isAdmin ? `<button onclick="deleteSound('${sound.id}', '${sound.storagePath}')" class="px-2 py-0 bg-[#FF6B6B] text-black border-2 border-black text-sm sound-button-shadow">삭제</button>` : ''}
+                    <div class="mt-2 text-center w-full">
+                        <h3 class="text-lg font-normal text-black truncate px-1" title="${sound.title}">${sound.title}</h3>
+                        <div class="flex justify-center gap-1 mt-1">
+                            <button onclick="downloadSound(this, '${sound.url}', '${sound.title}')" class="p-1 bg-[#A9A9A9] border-2 border-black sound-button-shadow" title="다운로드">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            </button>
+                            <button onclick="shareSound(this, '${sound.title}', '${sound.url}')" class="p-1 bg-[#A9A9A9] border-2 border-black sound-button-shadow" title="공유">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                            </button>
+                            ${isAdmin ? `<button onclick="deleteSound('${sound.id}', '${sound.storagePath}')" class="p-1 bg-[#FF6B6B] border-2 border-black sound-button-shadow"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                         </div>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         window.playSound = async (url, id) => {
-            try {
-                if (currentAudio && currentPlayingId === id) {
-                    if (!currentAudio.paused) {
-                        currentAudio.pause();
-                        currentPlayingId = null;
-                        renderSounds();
-                        return;
-                    }
-                }
-
-                if (currentAudio) {
+            if (loadingId) return;
+            
+            if (currentAudio && currentPlayingId === id) {
+                if (!currentAudio.paused) {
                     currentAudio.pause();
-                    currentAudio = null;
+                    currentPlayingId = null;
+                    renderSounds();
+                    return;
                 }
+            }
 
-                currentPlayingId = id;
-                currentAudio = new Audio(url);
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            loadingId = id;
+            renderSounds();
+
+            try {
+                currentAudio = new Audio();
+                currentAudio.src = url;
+                currentAudio.preload = "auto";
                 
-                const playPromise = currentAudio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(_ => {
-                        renderSounds();
-                    }).catch(error => {
-                        console.error("Playback failed:", error);
-                        currentPlayingId = null;
-                        renderSounds();
-                    });
-                }
+                await currentAudio.play();
+                currentPlayingId = id;
+                loadingId = null;
+                renderSounds();
 
                 currentAudio.onended = () => {
                     currentPlayingId = null;
                     renderSounds();
                 };
-
-                // Increment play count
-                const soundRef = doc(db, "sounds", id);
-                await updateDoc(soundRef, {
-                    playCount: increment(1)
-                });
+                
+                updateDoc(doc(db, "sounds", id), { playCount: increment(1) });
             } catch (e) {
-                console.error("Error in playSound:", e);
+                console.error(e);
+                loadingId = null;
+                renderSounds();
             }
         };
 
-        window.copyLink = (url) => {
-            navigator.clipboard.writeText(url).then(() => {
-                showAlert("링크가 클립보드에 복사되었습니다.");
-            }).catch(err => {
-                console.error('Could not copy text: ', err);
-            });
-        };
-
-        window.downloadSound = async (url, title) => {
+        window.downloadSound = async (btn, url, title) => {
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin-custom" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+            
             try {
-                const response = await window.fetch(url);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
+                const response = await fetch(url);
                 const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
+                const blobUrl = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = blobUrl;
-                
-                let extension = 'mp3';
-                const urlParts = url.split('?')[0].split('.');
-                if (urlParts.length > 1) {
-                    const potentialExt = urlParts[urlParts.length - 1].toLowerCase();
-                    if (['wav', 'ogg', 'm4a', 'aac', 'flac', 'mp3'].includes(potentialExt)) {
-                        extension = potentialExt;
-                    }
-                } else if (blob.type) {
-                    const typeParts = blob.type.split('/');
-                    if (typeParts.length > 1) {
-                        extension = typeParts[1].replace('mpeg', 'mp3');
-                    }
-                }
-
-                a.download = `${title}.${extension}`;
+                a.download = `${title}.mp3`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                window.URL.revokeObjectURL(blobUrl);
+                URL.revokeObjectURL(blobUrl);
             } catch (e) {
-                console.warn("Fetch download failed, falling back to direct link:", e);
                 window.open(url, '_blank');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
             }
         };
 
-        window.shareSound = async (title, url) => {
+        window.shareSound = async (btn, title, url) => {
             if (navigator.share) {
                 try {
-                    await navigator.share({
-                        title: title,
-                        text: `${title} 사운드를 들어보세요!`,
-                        url: url
-                    });
-                } catch (e) {
-                    console.log("Share failed or cancelled");
-                }
+                    await navigator.share({ title, text: `${title} 사운드!`, url });
+                } catch (e) {}
             } else {
-                window.copyLink(url);
+                navigator.clipboard.writeText(url).then(() => showAlert("링크 복사 완료!"));
             }
         };
 
-        // --- Admin Logic ---
         window.handleAdminClick = () => {
-            if (isAdmin) {
-                isAdmin = false;
-                showAlert("관리자 모드가 비활성화되었습니다.");
-                renderSounds();
-                return;
-            }
             adminClickCount++;
             if (adminClickCount >= 5) {
-                const modal = getEl('adminModal');
-                if (modal) modal.classList.remove('hidden');
+                getEl('adminModal').classList.remove('hidden');
                 adminClickCount = 0;
             }
         };
 
         window.closeAdminModal = () => {
-            const modal = getEl('adminModal');
-            const input = getEl('adminCodeInput');
-            if (modal) modal.classList.add('hidden');
-            if (input) input.value = '';
+            getEl('adminModal').classList.add('hidden');
+            getEl('adminCodeInput').value = '';
         };
 
         window.verifyAdmin = () => {
-            const input = getEl('adminCodeInput');
-            const code = input ? input.value : '';
-            if (code === "021017") { 
+            if (getEl('adminCodeInput').value === "021017") {
                 isAdmin = true;
                 closeAdminModal();
-                showAlert("관리자 모드가 활성화되었습니다.");
                 renderSounds();
             } else {
-                showAlert("잘못된 코드입니다.");
+                showAlert("코드 불일치");
             }
         };
 
         window.deleteSound = (id, storagePath) => {
-            showConfirm("정말로 이 사운드를 삭제하시겠습니까?", async () => {
+            showConfirm("삭제하시겠습니까?", async () => {
                 try {
                     await deleteDoc(doc(db, "sounds", id));
-                    if (storagePath) {
-                        const fileRef = ref(storage, storagePath);
-                        await deleteObject(fileRef);
-                    }
-                    showAlert("삭제되었습니다.");
+                    if (storagePath) await deleteObject(ref(storage, storagePath));
                     loadSounds();
-                } catch (e) {
-                    console.error("Delete failed:", e);
-                    showAlert("삭제 실패: 권한이 없거나 오류가 발생했습니다.");
-                }
+                } catch (e) { showAlert("삭제 실패"); }
             });
         };
 
-        // --- Upload Logic ---
-        window.openUploadModal = () => {
-            const modal = getEl('uploadModal');
-            if (modal) modal.classList.remove('hidden');
-        };
-
+        window.openUploadModal = () => getEl('uploadModal').classList.remove('hidden');
         window.closeUploadModal = () => {
-            const modal = getEl('uploadModal');
-            const title = getEl('uploadTitle');
-            const file = getEl('uploadFile');
-            const progress = getEl('uploadProgress');
-            const bar = getEl('progressBar');
-            
-            if (modal) modal.classList.add('hidden');
-            if (title) title.value = '';
-            if (file) file.value = '';
-            if (progress) progress.classList.add('hidden');
-            if (bar) bar.style.width = '0%';
+            getEl('uploadModal').classList.add('hidden');
+            getEl('uploadTitle').value = '';
+            getEl('uploadFile').value = '';
+            getEl('uploadProgress').classList.add('hidden');
         };
 
         window.handleUpload = async () => {
-            const titleInput = getEl('uploadTitle');
-            const fileInput = getEl('uploadFile');
-            const title = titleInput ? titleInput.value.trim() : '';
-            const file = fileInput ? fileInput.files[0] : null;
+            const title = getEl('uploadTitle').value.trim();
+            const file = getEl('uploadFile').files[0];
+            if (!title || !file) return showAlert("입력 확인");
 
-            if (!title || !file) {
-                showAlert("제목과 파일을 모두 선택해주세요.");
-                return;
-            }
-
-            if (!storage || !db) {
-                showAlert("파이어베이스가 초기화되지 않았습니다.");
-                return;
-            }
-
-            const submitBtn = getEl('uploadSubmitBtn');
-            const progressDiv = getEl('uploadProgress');
-            const bar = getEl('progressBar');
-
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = "업로드 중...";
-            }
-            if (progressDiv) progressDiv.classList.remove('hidden');
+            const btn = getEl('uploadSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = "처리 중...";
+            getEl('uploadProgress').classList.remove('hidden');
 
             try {
-                const safeFileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
-                const storagePath = `sounds/${Date.now()}_${safeFileName}`;
-                const storageRef = ref(storage, storagePath);
+                const path = `sounds/${Date.now()}_${file.name.replace(/[^a-z0-9.]/gi, '_')}`;
+                const storageRef = ref(storage, path);
                 const uploadTask = uploadBytesResumable(storageRef, file);
 
                 uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        if (bar) bar.style.width = progress + '%';
-                    }, 
-                    (error) => {
-                        console.error("Upload error details:", error);
-                        let errorMsg = "업로드 실패: ";
-                        if (error.code === 'storage/unauthorized') {
-                            errorMsg += "권한이 없습니다. Firebase Storage 규칙과 CORS 설정을 확인하세요.";
-                        } else {
-                            errorMsg += error.message;
-                        }
-                        showAlert(errorMsg);
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.textContent = "업로드";
-                        }
-                    }, 
+                    (s) => getEl('progressBar').style.width = (s.bytesTransferred / s.totalBytes) * 100 + '%',
+                    (e) => { showAlert("업로드 실패"); btn.disabled = false; btn.textContent = "업로드"; },
                     async () => {
-                        try {
-                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                            await addDoc(collection(db, "sounds"), {
-                                title: title,
-                                url: downloadURL,
-                                storagePath: storagePath,
-                                playCount: 0,
-                                createdAt: new Date().toISOString()
-                            });
-                            showAlert("업로드 성공!");
-                            closeUploadModal();
-                            loadSounds();
-                        } catch (e) {
-                            console.error("Firestore error:", e);
-                            showAlert("데이터베이스 저장 실패: " + e.message);
-                        } finally {
-                            if (submitBtn) {
-                                submitBtn.disabled = false;
-                                submitBtn.textContent = "업로드";
-                            }
-                        }
+                        const url = await getDownloadURL(uploadTask.snapshot.ref);
+                        await addDoc(collection(db, "sounds"), { title, url, storagePath: path, playCount: 0, createdAt: new Date().toISOString() });
+                        closeUploadModal();
+                        loadSounds();
+                        btn.disabled = false;
+                        btn.textContent = "업로드";
                     }
                 );
-            } catch (err) {
-                console.error("Immediate upload error:", err);
-                showAlert("업로드 시작 실패: " + err.message);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "업로드";
-                }
-            }
+            } catch (e) { btn.disabled = false; btn.textContent = "업로드"; }
         };
 
-        // --- Custom Dialogs ---
         window.showAlert = (msg) => {
-            const modal = getEl('alertModal');
-            const text = getEl('alertMessage');
-            if (text) text.textContent = msg;
-            if (modal) modal.classList.remove('hidden');
+            getEl('alertMessage').textContent = msg;
+            getEl('alertModal').classList.remove('hidden');
+        };
+        window.closeAlert = () => getEl('alertModal').classList.add('hidden');
+        window.showConfirm = (msg, cb) => {
+            getEl('confirmMessage').textContent = msg;
+            getEl('confirmModal').classList.remove('hidden');
+            confirmCallback = cb;
+        };
+        window.closeConfirm = (res) => {
+            getEl('confirmModal').classList.add('hidden');
+            if (res && confirmCallback) confirmCallback();
         };
 
-        window.closeAlert = () => {
-            const modal = getEl('alertModal');
-            if (modal) modal.classList.add('hidden');
-        };
-
-        window.showConfirm = (msg, callback) => {
-            const modal = getEl('confirmModal');
-            const text = getEl('confirmMessage');
-            if (text) text.textContent = msg;
-            if (modal) modal.classList.remove('hidden');
-            confirmCallback = callback;
-        };
-
-        window.closeConfirm = (result) => {
-            const modal = getEl('confirmModal');
-            if (modal) modal.classList.add('hidden');
-            if (result && confirmCallback) {
-                confirmCallback();
-            }
-            confirmCallback = null;
-        };
+        init();
     </script>
 </body>
 </html>
