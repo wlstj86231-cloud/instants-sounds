@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -153,8 +152,8 @@
                     <input type="text" id="uploadTitle" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none" placeholder="사운드 제목 입력">
                 </div>
                 <div>
-                    <label class="block text-xl mb-1">파일 (MP3)</label>
-                    <input type="file" id="uploadFile" accept="audio/mpeg" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none">
+                    <label class="block text-xl mb-1">파일 (오디오)</label>
+                    <input type="file" id="uploadFile" accept="audio/*" class="w-full px-3 py-2 bg-[#FDF6E3] border-2 border-black outline-none">
                 </div>
                 <div id="uploadProgress" class="hidden w-full bg-gray-200 h-2 mt-2">
                     <div id="progressBar" class="bg-black h-full w-0 transition-all"></div>
@@ -359,7 +358,23 @@
                 const blobUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = blobUrl;
-                a.download = `${title}.mp3`;
+                
+                // Get extension from URL or blob type
+                let extension = 'mp3';
+                const urlParts = url.split('?')[0].split('.');
+                if (urlParts.length > 1) {
+                    const potentialExt = urlParts[urlParts.length - 1].toLowerCase();
+                    if (['wav', 'ogg', 'm4a', 'aac', 'flac', 'mp3'].includes(potentialExt)) {
+                        extension = potentialExt;
+                    }
+                } else if (blob.type) {
+                    const typeParts = blob.type.split('/');
+                    if (typeParts.length > 1) {
+                        extension = typeParts[1];
+                    }
+                }
+
+                a.download = `${title}.${extension}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
