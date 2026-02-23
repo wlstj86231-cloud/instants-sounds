@@ -226,7 +226,6 @@
             console.log("Firebase initialized successfully");
         } catch (e) {
             console.error("Firebase initialization failed:", e);
-            alert("파이어베이스 초기화 실패. 설정을 확인해주세요.");
         }
 
         // State
@@ -239,23 +238,28 @@
         let currentPlayingId = null;
         let confirmCallback = null;
 
-        // UI Elements
-        const soundGrid = document.getElementById('soundGrid');
-        const searchInput = document.getElementById('searchInput');
-        const sortPopularBtn = document.getElementById('sortPopularBtn');
-        const currentYearSpan = document.getElementById('currentYear');
+        // UI Elements (Lazy access)
+        const getEl = (id) => document.getElementById(id);
 
-        // Ensure DOM is ready and elements exist
-        document.addEventListener('DOMContentLoaded', () => {
-            if (currentYearSpan) currentYearSpan.textContent = new Date().getFullYear();
+        // Ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        function init() {
+            const yearSpan = getEl('currentYear');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
             if (db) loadSounds();
-        });
+        }
 
         // --- Functions ---
 
         async function loadSounds() {
-            if (!db || !soundGrid) return;
-            soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드 로딩 중...</div>';
+            const grid = getEl('soundGrid');
+            if (!db || !grid) return;
+            grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드 로딩 중...</div>';
             try {
                 let q = query(collection(db, "sounds"), orderBy("createdAt", "desc"));
                 if (isPopularSort) {
@@ -270,7 +274,7 @@
                 applyFilter();
             } catch (error) {
                 console.error("Error fetching sounds:", error);
-                if (soundGrid) soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">로딩 실패. 파이어베이스 설정을 확인하세요.</div>';
+                if (grid) grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">로딩 실패. 파이어베이스 설정을 확인하세요.</div>';
             }
         }
 
@@ -279,33 +283,37 @@
         };
 
         window.resetSearch = () => {
-            if (searchInput) searchInput.value = '';
+            const input = getEl('searchInput');
+            if (input) input.value = '';
             applyFilter();
         };
 
         window.toggleSortPopular = () => {
             isPopularSort = !isPopularSort;
-            if (sortPopularBtn) {
-                sortPopularBtn.classList.toggle('bg-[#FFD700]', isPopularSort);
-                sortPopularBtn.classList.toggle('bg-[#DCCB98]', !isPopularSort);
+            const btn = getEl('sortPopularBtn');
+            if (btn) {
+                btn.classList.toggle('bg-[#FFD700]', isPopularSort);
+                btn.classList.toggle('bg-[#DCCB98]', !isPopularSort);
             }
             loadSounds();
         };
 
         function applyFilter() {
-            const term = searchInput ? searchInput.value.toLowerCase() : '';
+            const input = getEl('searchInput');
+            const term = input ? input.value.toLowerCase() : '';
             filteredSounds = sounds.filter(s => s.title.toLowerCase().includes(term));
             renderSounds();
         }
 
         function renderSounds() {
-            if (!soundGrid) return;
+            const grid = getEl('soundGrid');
+            if (!grid) return;
             if (filteredSounds.length === 0) {
-                soundGrid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드를 찾을 수 없습니다.</div>';
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-2xl">사운드를 찾을 수 없습니다.</div>';
                 return;
             }
 
-            soundGrid.innerHTML = filteredSounds.map(sound => `
+            grid.innerHTML = filteredSounds.map(sound => `
                 <div class="flex flex-col items-center group">
                     <button
                         onclick="playSound('${sound.url}', '${sound.id}')"
@@ -367,7 +375,7 @@
                     renderSounds();
                 };
 
-                // Increment play count in Firestore
+                // Increment play count
                 const soundRef = doc(db, "sounds", id);
                 await updateDoc(soundRef, {
                     playCount: increment(1)
@@ -395,7 +403,6 @@
                 const a = document.createElement('a');
                 a.href = blobUrl;
                 
-                // Get extension from URL or blob type
                 let extension = 'mp3';
                 const urlParts = url.split('?')[0].split('.');
                 if (urlParts.length > 1) {
@@ -417,7 +424,6 @@
                 window.URL.revokeObjectURL(blobUrl);
             } catch (e) {
                 console.warn("Fetch download failed, falling back to direct link:", e);
-                // Fallback: open in new tab
                 window.open(url, '_blank');
             }
         };
@@ -448,19 +454,23 @@
             }
             adminClickCount++;
             if (adminClickCount >= 5) {
-                document.getElementById('adminModal').classList.remove('hidden');
+                const modal = getEl('adminModal');
+                if (modal) modal.classList.remove('hidden');
                 adminClickCount = 0;
             }
         };
 
         window.closeAdminModal = () => {
-            document.getElementById('adminModal').classList.add('hidden');
-            document.getElementById('adminCodeInput').value = '';
+            const modal = getEl('adminModal');
+            const input = getEl('adminCodeInput');
+            if (modal) modal.classList.add('hidden');
+            if (input) input.value = '';
         };
 
         window.verifyAdmin = () => {
-            const input = document.getElementById('adminCodeInput').value;
-            if (input === "021017") { 
+            const input = getEl('adminCodeInput');
+            const code = input ? input.value : '';
+            if (code === "021017") { 
                 isAdmin = true;
                 closeAdminModal();
                 showAlert("관리자 모드가 활성화되었습니다.");
@@ -489,22 +499,29 @@
 
         // --- Upload Logic ---
         window.openUploadModal = () => {
-            document.getElementById('uploadModal').classList.remove('hidden');
+            const modal = getEl('uploadModal');
+            if (modal) modal.classList.remove('hidden');
         };
 
         window.closeUploadModal = () => {
-            document.getElementById('uploadModal').classList.add('hidden');
-            document.getElementById('uploadTitle').value = '';
-            document.getElementById('uploadFile').value = '';
-            document.getElementById('uploadProgress').classList.add('hidden');
-            document.getElementById('progressBar').style.width = '0%';
+            const modal = getEl('uploadModal');
+            const title = getEl('uploadTitle');
+            const file = getEl('uploadFile');
+            const progress = getEl('uploadProgress');
+            const bar = getEl('progressBar');
+            
+            if (modal) modal.classList.add('hidden');
+            if (title) title.value = '';
+            if (file) file.value = '';
+            if (progress) progress.classList.add('hidden');
+            if (bar) bar.style.width = '0%';
         };
 
         window.handleUpload = async () => {
-            const titleInput = document.getElementById('uploadTitle');
-            const fileInput = document.getElementById('uploadFile');
-            const title = titleInput.value.trim();
-            const file = fileInput.files[0];
+            const titleInput = getEl('uploadTitle');
+            const fileInput = getEl('uploadFile');
+            const title = titleInput ? titleInput.value.trim() : '';
+            const file = fileInput ? fileInput.files[0] : null;
 
             if (!title || !file) {
                 showAlert("제목과 파일을 모두 선택해주세요.");
@@ -512,17 +529,21 @@
             }
 
             if (!storage || !db) {
-                showAlert("파이어베이스가 초기화되지 않았습니다. 페이지를 새로고침하거나 설정을 확인하세요.");
+                showAlert("파이어베이스가 초기화되지 않았습니다.");
                 return;
             }
 
-            const submitBtn = document.getElementById('uploadSubmitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = "업로드 중...";
-            document.getElementById('uploadProgress').classList.remove('hidden');
+            const submitBtn = getEl('uploadSubmitBtn');
+            const progressDiv = getEl('uploadProgress');
+            const bar = getEl('progressBar');
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "업로드 중...";
+            }
+            if (progressDiv) progressDiv.classList.remove('hidden');
 
             try {
-                // Sanitize filename: remove special characters and spaces
                 const safeFileName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
                 const storagePath = `sounds/${Date.now()}_${safeFileName}`;
                 const storageRef = ref(storage, storagePath);
@@ -531,19 +552,21 @@
                 uploadTask.on('state_changed', 
                     (snapshot) => {
                         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        document.getElementById('progressBar').style.width = progress + '%';
+                        if (bar) bar.style.width = progress + '%';
                     }, 
                     (error) => {
                         console.error("Upload error details:", error);
                         let errorMsg = "업로드 실패: ";
                         if (error.code === 'storage/unauthorized') {
-                            errorMsg += "권한이 없습니다. Firebase Storage 규칙을 확인하세요.";
+                            errorMsg += "권한이 없습니다. Firebase Storage 규칙과 CORS 설정을 확인하세요.";
                         } else {
                             errorMsg += error.message;
                         }
                         showAlert(errorMsg);
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = "업로드";
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = "업로드";
+                        }
                     }, 
                     async () => {
                         try {
@@ -562,48 +585,52 @@
                             console.error("Firestore error:", e);
                             showAlert("데이터베이스 저장 실패: " + e.message);
                         } finally {
-                            submitBtn.disabled = false;
-                            submitBtn.textContent = "업로드";
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = "업로드";
+                            }
                         }
                     }
                 );
             } catch (err) {
                 console.error("Immediate upload error:", err);
                 showAlert("업로드 시작 실패: " + err.message);
-                submitBtn.disabled = false;
-                submitBtn.textContent = "업로드";
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "업로드";
+                }
             }
         };
 
         // --- Custom Dialogs ---
         window.showAlert = (msg) => {
-            const alertMsg = document.getElementById('alertMessage');
-            if (alertMsg) alertMsg.textContent = msg;
-            document.getElementById('alertModal').classList.remove('hidden');
+            const modal = getEl('alertModal');
+            const text = getEl('alertMessage');
+            if (text) text.textContent = msg;
+            if (modal) modal.classList.remove('hidden');
         };
 
         window.closeAlert = () => {
-            document.getElementById('alertModal').classList.add('hidden');
+            const modal = getEl('alertModal');
+            if (modal) modal.classList.add('hidden');
         };
 
         window.showConfirm = (msg, callback) => {
-            const confirmMsg = document.getElementById('confirmMessage');
-            if (confirmMsg) confirmMsg.textContent = msg;
-            document.getElementById('confirmModal').classList.remove('hidden');
+            const modal = getEl('confirmModal');
+            const text = getEl('confirmMessage');
+            if (text) text.textContent = msg;
+            if (modal) modal.classList.remove('hidden');
             confirmCallback = callback;
         };
 
         window.closeConfirm = (result) => {
-            document.getElementById('confirmModal').classList.add('hidden');
+            const modal = getEl('confirmModal');
+            if (modal) modal.classList.add('hidden');
             if (result && confirmCallback) {
                 confirmCallback();
             }
             confirmCallback = null;
         };
-
-        // Initial Load
-        if (db) loadSounds();
-
     </script>
 </body>
 </html>
